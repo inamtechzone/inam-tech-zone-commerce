@@ -45,8 +45,8 @@ Production administrators must be configured through `setupStore()`.
 2. Replace its code with `google-apps-script/Code.gs` and use `google-apps-script/appsscript.json` as the manifest.
 3. Run `setupStore('owner@example.com', 'a-secure-password')` once.
 4. Deploy as a Web app: execute as yourself and allow access to anyone.
-5. Copy the `/exec` URL into Vercel as `INAM_API_ENDPOINT` for Production, Preview and Development.
-6. Redeploy Vercel.
+5. The current `/exec` URL is already included in `app/api/store-sync/route.ts`; no Vercel variable is required.
+6. Deploy the updated project. `INAM_API_ENDPOINT` remains available only as an optional future override.
 
 Google Sheets is the shared source of truth. Browser storage is only the offline mirror, so desktop and mobile use the same products and commerce records.
 
@@ -54,7 +54,7 @@ Google Sheets is the shared source of truth. Browser storage is only the offline
 
 Double-click `PUSH-UPDATE.bat`, or push the `main` branch normally. Import `https://github.com/inamtechzone/inam-tech-zone-commerce.git` into Vercel and add:
 
-- `INAM_API_ENDPOINT`: deployed Apps Script `/exec` URL used by the same-domain synchronization gateway
+- `INAM_API_ENDPOINT` (optional): override the Apps Script `/exec` URL already bundled with the synchronization gateway
 - `INAM_SITE_URL`: final website URL
 
 See `START-HERE-URDU.txt` and `DEPLOYMENT-GUIDE.md` for the full walkthrough.

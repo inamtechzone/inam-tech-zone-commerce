@@ -13,13 +13,10 @@ INAM TECH ZONE — PC + MOBILE AUTO SYNC
    - Web app کا /exec URL copy کریں۔
    - اگر backend پہلے setup ہے تو setupStore() دوبارہ run نہ کریں۔
 
-2) VERCEL GLOBAL CONNECTION
-   - Vercel میں INAM TECH ZONE project کھولیں۔
-   - Settings > Environment Variables کھولیں۔
-   - Variable name: INAM_API_ENDPOINT
-   - Value: Apps Script کا مکمل /exec URL
-   - Production, Preview اور Development تینوں select کریں۔
-   - Save کرکے latest deployment کو Redeploy کریں۔
+2) SHARED CONNECTION
+   - Apps Script کا موجودہ /exec URL website code میں شامل کر دیا گیا ہے۔
+   - Vercel Environment Variable بنانے کی ضرورت نہیں ہے۔
+   - Updated folder کو GitHub پر push کرکے website deploy کریں۔
 
 3) CHECK
    - PC اور mobile پر updated website کھولیں۔

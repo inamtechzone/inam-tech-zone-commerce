@@ -31,7 +31,8 @@ For future backend updates, use **Deploy → Manage deployments → Edit → New
 Import the GitHub repository and add these Environment Variables:
 
 ```text
-INAM_API_ENDPOINT=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+# The current Apps Script /exec URL is already bundled in app/api/store-sync/route.ts.
+# INAM_API_ENDPOINT is optional and only needed to override that URL later.
 INAM_SITE_URL=https://your-domain.com
 ```
 

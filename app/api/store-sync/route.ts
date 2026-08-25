@@ -9,8 +9,10 @@ const noStoreHeaders = {
   Expires: '0',
 };
 
+const bundledGoogleEndpoint = 'https://script.google.com/macros/s/AKfycbx2TxU8alkP692Jc_telvWLN6M7auDjVxkiSYDdmyuEFQdWPjfbp51zOK6osPUUe94z3Q/exec';
+
 function googleEndpoint() {
-  return String(process.env.INAM_API_ENDPOINT || process.env.NEXT_PUBLIC_INAM_API_ENDPOINT || '').trim();
+  return String(process.env.INAM_API_ENDPOINT || process.env.NEXT_PUBLIC_INAM_API_ENDPOINT || bundledGoogleEndpoint).trim();
 }
 
 function configurationError() {
