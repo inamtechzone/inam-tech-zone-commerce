@@ -12,10 +12,17 @@ import {
   quoteSeed,
 } from './store-data';
 
+// --- Global Constants & Helpers ---
+const orderStages = ['Placed', 'Processing', 'Packed', 'Shipped', 'Delivered'];
 const storageKey = (name) => `inam-tech-zone:v3:${name}`;
+const serverSyncProxy = '/api/store-sync';
+const SHARED_DATA_REFRESH_MS = 3000;
 const requiredNavigation = ['Home', 'Products', 'Solutions', 'Services', 'Support'];
+const publicRoutes = { home: '/', shop: '/products', solutions: '/solutions', services: '/services', support: '/support' };
+const viewForPath = (path) => ({ '/products': 'shop', '/solutions': 'solutions', '/services': 'services', '/support': 'support' }[path] || 'home');
+const viewForLink = (label) => ({ home: 'home', featured: 'home', products: 'shop', shop: 'shop', solutions: 'solutions', services: 'services', support: 'support' }[String(label).trim().toLowerCase()] || 'shop');
+const uid = (prefix = 'ID') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 const categoryIcons = { Hardware: '⬡', 'Power Tools': '⚒', Electrical: 'ϟ', 'CCTV & Surveillance': '◉', 'Solar Energy': '☀', Networking: '⌘', 'Alarm Systems': '◌', 'Access Control': '◆', 'Fire Alarm': '△', Accessories: '＋' };
-const orderStages = ['Order Placed', 'Processing', 'Packed', 'Shipped', 'Delivered'];
 const productImages = (product) => [product?.image, ...(Array.isArray(product?.gallery) ? product.gallery : [])].filter((url, index, images) => Boolean(url) && images.indexOf(url) === index).slice(0, 6);
 const imageFallback = '/itz-logo-transparent.png';
 
@@ -72,6 +79,7 @@ function downloadDatasheet(product, settings) {
 function useStoredState(key, fallback) {
   const [value, setValue] = useState(fallback);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       const saved = localStorage.getItem(storageKey(key));
       if (saved) {
@@ -80,9 +88,11 @@ function useStoredState(key, fallback) {
     } catch {}
   }, [key]);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try { localStorage.setItem(storageKey(key), JSON.stringify(value)); } catch {}
   }, [key, value]);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const updateFromAnotherTab = (event) => {
       if (event.key !== storageKey(key) || !event.newValue) return;
       try { setValue(JSON.parse(event.newValue)); } catch {}
@@ -115,6 +125,14 @@ async function apiCall(endpoint, action, payload = {}, token = '') {
   } finally { clearTimeout(timeout); }
 }
 
+async function fetchBootstrap(endpoint) {
+  const response = await fetch(`${endpoint}?action=bootstrap&_=${Date.now()}`, { cache: 'no-store' });
+  const data = await response.json().catch(() => ({ ok: false, error: `Invalid synchronization response (${response.status})` }));
+  if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
+  if (!data.ok) throw new Error(data.error || 'Could not load shared store data.');
+  return data;
+}
+
 function StoreHeader({ settings, categories, cartCount, wishlistCount, colorMode, currentView, onThemeToggle, onCart, onSearch, onNavigate, onMenu, menuOpen, onQuote, onTrack }) {
   const configured = (settings.headerLinks || []).map((link) => String(link).trim()).filter(Boolean).map((link) => link.toLowerCase() === 'featured' ? 'Home' : link);
   const navigation = [...configured, ...requiredNavigation.filter((required) => !configured.some((link) => link.toLowerCase() === required.toLowerCase()))];
@@ -124,7 +142,7 @@ function StoreHeader({ settings, categories, cartCount, wishlistCount, colorMode
       <button className="mobile-menu-button" onClick={onMenu} aria-label="Toggle menu" aria-expanded={menuOpen}>{menuOpen ? '×' : '☰'}</button>
       <button className="brand button-reset" onClick={() => onNavigate('home')} aria-label={`${settings.brandName} home`}><BrandLockup settings={settings} /></button>
       <nav className={`desktop-nav ${menuOpen ? 'open' : ''}`} aria-label="Main navigation">
-        {navigation.map((link) => { const target = link.toLowerCase() === 'home' ? 'home' : link.toLowerCase(); return <button className={currentView === target ? 'active' : ''} key={link} onClick={() => onNavigate(target)}>{link}</button>; })}
+        {navigation.map((link) => { const target = viewForLink(link); return <button className={currentView === target ? 'active' : ''} key={link} onClick={() => onNavigate(target)}>{link}</button>; })}
         <div className="mobile-category-nav"><span>Browse categories</span>{categories.filter((category) => category.active).map((category) => <button key={category.id} onClick={() => onNavigate('shop', category.name)}><i>{categoryIcons[category.name] || '＋'}</i>{category.name}<b>→</b></button>)}</div>
       </nav>
       <div className="header-actions">
@@ -153,9 +171,7 @@ function Hero({ settings, featured, onShop, onProduct, onQuote }) {
       <div className="hero-proof"><div><strong>10+</strong><span>Specialist categories</span></div><div><strong>24/7</strong><span>Project assistance</span></div><div><strong>100%</strong><span>Secure checkout</span></div></div>
     </div>
     <div className="hero-visual">
-      <div className="hero-image-container">
-        <StoreImage src={settings.heroImage} alt={heroProduct.name} />
-      </div>
+      <StoreImage src={settings.heroImage} alt={heroProduct.name} />
       <div className="image-badge"><span>ITZ</span> Engineered solutions</div>
       <button className="floating-product" onClick={() => onProduct(heroProduct)}><p>{heroProduct.name}</p><span>{formatMoney(heroProduct.price, settings)} · {heroProduct.badge || 'Project grade'} →</span></button>
     </div>
@@ -279,7 +295,7 @@ function QuoteModal({ open, product, categories, settings, onClose, onSubmit }) 
 function ComparePanel({ ids, products, settings, onRemove, onClear, onClose, onProduct }) {
   const selected = ids.map((id) => products.find((item) => item.id === id)).filter(Boolean);
   if (!selected.length) return null;
-  return <div className="overlay compare-overlay" role="dialog" aria-modal="true" aria-label="Product comparison" onMouseDown={onClose}><section className="compare-panel" onMouseDown={(event) => event.stopPropagation()}><div className="compare-head"><div><p className="eyebrow">Side-by-side</p><h2>Technical comparison</h2><p>Compare up to three products before adding them to your project.</p></div><div><button onClick={onClear}>Clear all</button><button onClick={onClose}>×</button></div></div><div className={`compare-grid count-${selected.length}`}>{selected.map((item) => <article key={item.id}><button className="compare-remove" onClick={() => onRemove(item.id)}>×</button><div className="compare-image-box"><StoreImage src={item.image} alt={item.name} loading="lazy" /></div><p>{item.category}</p><button className="compare-title" onClick={() => { onClose(); onProduct(item); }}>{item.name}</button><strong>{formatMoney(item.price, settings)}</strong><dl><div><dt>Brand / model</dt><dd>{item.brand || '—'} · {item.model || '—'}</dd></div><div><dt>Warranty</dt><dd>{item.warranty || 'Contact sales'}</dd></div><div><dt>Availability</dt><dd>{item.leadTime || 'Contact sales'}</dd></div>{(item.details || []).slice(0, 4).map((spec) => <div key={spec}><dt>Specification</dt><dd>{spec}</dd></div>)}</dl></article>)}</div></section></div>;
+  return <div className="overlay compare-overlay" role="dialog" aria-modal="true" aria-label="Product comparison" onMouseDown={onClose}><section className="compare-panel" onMouseDown={(event) => event.stopPropagation()}><div className="compare-head"><div><p className="eyebrow">Side-by-side</p><h2>Technical comparison</h2><p>Compare up to three products before adding them to your project.</p></div><div><button onClick={onClear}>Clear all</button><button onClick={onClose}>×</button></div></div><div className={`compare-grid count-${selected.length}`}>{selected.map((item) => <article key={item.id}><button className="compare-remove" onClick={() => onRemove(item.id)}>×</button><StoreImage src={item.image} alt={item.name} loading="lazy" /><p>{item.category}</p><button className="compare-title" onClick={() => { onClose(); onProduct(item); }}>{item.name}</button><strong>{formatMoney(item.price, settings)}</strong><dl><div><dt>Brand / model</dt><dd>{item.brand || '—'} · {item.model || '—'}</dd></div><div><dt>Warranty</dt><dd>{item.warranty || 'Contact sales'}</dd></div><div><dt>Availability</dt><dd>{item.leadTime || 'Contact sales'}</dd></div>{(item.details || []).slice(0, 4).map((spec) => <div key={spec}><dt>Specification</dt><dd>{spec}</dd></div>)}</dl></article>)}</div></section></div>;
 }
 
 function TrackOrderModal({ open, orders, settings, onClose }) {
@@ -311,300 +327,64 @@ function CartDrawer({ open, cart, products, settings, onClose, onQty, onRemove, 
   const lines = cart.map((line) => ({ ...line, product: products.find((p) => p.id === line.id) })).filter((line) => line.product);
   const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.qty, 0);
   const progress = Math.min(100, (subtotal / settings.freeShippingThreshold) * 100);
-  return <><div className={`drawer-scrim ${open ? 'show' : ''}`} onClick={onClose} /><aside className={`cart-drawer ${open ? 'open' : ''}`} aria-hidden={!open}>
-    <div className="drawer-header"><div><p className="eyebrow">Your selection</p><h2>Shopping bag <sup>{lines.reduce((n, l) => n + l.qty, 0)}</sup></h2></div><button onClick={onClose} aria-label="Close bag">×</button></div>
-    {subtotal < settings.freeShippingThreshold ? <div className="shipping-progress"><p>Add {formatMoney(settings.freeShippingThreshold - subtotal, settings)} for complimentary shipping</p><div><span style={{ width: `${progress}%` }} /></div></div> : <div className="shipping-earned">✓ You&apos;ve unlocked complimentary shipping</div>}
-    <div className="cart-lines">{lines.length ? lines.map(({ product, qty }) => <div className="cart-line" key={product.id}><div className="cart-thumb"><StoreImage src={product.image} alt="" loading="lazy" /></div><div><p>{product.category}</p><h3>{product.name}</h3><span>{product.color}</span><div className="mini-stepper"><button onClick={() => onQty(product.id, qty - 1)}>−</button><span>{qty}</span><button onClick={() => onQty(product.id, qty + 1)}>＋</button></div></div><div className="line-price"><strong>{formatMoney(product.price * qty, settings)}</strong><button onClick={() => onRemove(product.id)}>Remove</button></div></div>) : <div className="empty-state"><span>🎒</span><h3>Your bag is empty</h3><p>Browse our catalog to add products.</p></div>}</div>
-    {Boolean(lines.length) && <div className="drawer-footer"><div className="summary-row"><span>Subtotal</span><strong>{formatMoney(subtotal, settings)}</strong></div><p className="summary-note">Taxes and shipping calculated during checkout.</p><button className="button button-dark full" onClick={onCheckout}>Proceed to checkout <span>→</span></button></div>}
-  </aside></>;
-}
-
-export default function StoreFront() {
-  const [settings] = useStoredState('settings', defaultSettings);
-  const [categories] = useStoredState('categories', categoriesSeed);
-  const [products] = useStoredState('products', productSeed);
-  const [orders] = useStoredState('orders', orderSeed);
-  const [cart, setCart] = useStoredState('cart', [{ id: 'p1', qty: 1 }]);
-  const [wishlist, setWishlist] = useStoredState('wishlist', ['p2', 'p4']);
-  const [compare, setCompare] = useStoredState('compare', []);
-  const [colorMode, setColorMode] = useStoredState('theme', 'dark');
-
-  const [currentView, setCurrentView] = useState('home');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [activeProduct, setActiveProduct] = useState(null);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [quoteProduct, setQuoteProduct] = useState(null);
-  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
-  const [trackModalOpen, setTrackModalOpen] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', colorMode);
-  }, [colorMode]);
-
-  const cartCount = useMemo(() => cart.reduce((total, line) => total + line.qty, 0), [cart]);
-
-  const handleNavigate = (view, category = 'All') => {
-    setCurrentView(view);
-    setSelectedCategory(category);
-    setMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleAddToCart = (product, qty = 1) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) => item.id === product.id ? { ...item, qty: item.qty + qty } : item);
-      }
-      return [...prev, { id: product.id, qty }];
-    });
-    setCartOpen(true);
-  };
-
-  const handleCartQty = (id, newQty) => {
-    if (newQty <= 0) {
-      setCart((prev) => prev.filter((item) => item.id !== id));
-    } else {
-      setCart((prev) => prev.map((item) => item.id === id ? { ...item, qty: newQty } : item));
-    }
-  };
-
-  const handleToggleWishlist = (id) => {
-    setWishlist((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
-  };
-
-  const handleToggleCompare = (id) => {
-    setCompare((prev) => {
-      if (prev.includes(id)) return prev.filter((item) => item !== id);
-      if (prev.length >= 3) return prev;
-      return [...prev, id];
-    });
-  };
-
-  const handleQuoteRequest = (product) => {
-    setQuoteProduct(product);
-    setQuoteModalOpen(true);
-  };
 
   return (
-    <div className="app-shell">
-      {/* تمام امیجز کے سائز کو درست اور رسپانسو رکھنے کا Global CSS */}
-      <style html-global="true">{`
-        .store-image {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: cover !important;
-          object-position: center !important;
-          display: block !important;
-        }
+    <>
+      <div className={`drawer-scrim ${open ? 'show' : ''}`} onClick={onClose} />
+      <aside className={`cart-drawer ${open ? 'open' : ''}`} aria-hidden={!open}>
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">Your selection</p>
+            <h2>Shopping bag <sup>{lines.reduce((n, l) => n + l.qty, 0)}</sup></h2>
+          </div>
+          <button onClick={onClose} aria-label="Close bag">×</button>
+        </div>
 
-        .store-image-fallback {
-          object-fit: contain !important;
-          padding: 8px !important;
-          background-color: rgba(255, 255, 255, 0.05) !important;
-        }
-
-        /* 1. Product Cards (Square aspect ratio for Mobile & PC) */
-        .product-card-image {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          overflow: hidden;
-          border-radius: 8px;
-          background-color: rgba(0, 0, 0, 0.04);
-        }
-
-        .product-card-image .image-button {
-          width: 100%;
-          height: 100%;
-          display: block;
-          padding: 0;
-          border: none;
-          background: transparent;
-        }
-
-        /* 2. Hero Section Main Banner Image */
-        .hero-visual {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 4 / 3;
-          max-height: 420px;
-          overflow: hidden;
-          border-radius: 12px;
-        }
-
-        .hero-image-container {
-          width: 100%;
-          height: 100%;
-        }
-
-        /* 3. Product Popup / Detail Modal Image */
-        .product-detail-image {
-          position: relative;
-          width: 100%;
-          height: 380px;
-          overflow: hidden;
-          border-radius: 12px;
-          background-color: rgba(0, 0, 0, 0.04);
-        }
-
-        .product-gallery-thumbs {
-          display: flex;
-          gap: 8px;
-          margin-top: 10px;
-        }
-
-        .product-gallery-thumbs button {
-          width: 60px;
-          height: 60px;
-          aspect-ratio: 1 / 1;
-          overflow: hidden;
-          border-radius: 6px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          padding: 0;
-          background: transparent;
-        }
-
-        /* 4. Cart Drawer Items & Compare Items */
-        .cart-thumb, .compare-image-box {
-          width: 64px;
-          height: 64px;
-          aspect-ratio: 1 / 1;
-          overflow: hidden;
-          border-radius: 6px;
-          flex-shrink: 0;
-        }
-
-        .compare-image-box {
-          width: 100%;
-          height: 160px;
-          margin-bottom: 12px;
-        }
-
-        /* 5. Mobile Dynamic Adjustments */
-        @media (max-width: 768px) {
-          .hero-visual {
-            aspect-ratio: 16 / 9;
-            max-height: 260px;
-          }
-
-          .product-detail-image {
-            height: 250px;
-          }
-
-          .product-gallery-thumbs button {
-            width: 48px;
-            height: 48px;
-          }
-        }
-      `}</style>
-
-      <StoreHeader
-        settings={settings}
-        categories={categories}
-        cartCount={cartCount}
-        wishlistCount={wishlist.length}
-        colorMode={colorMode}
-        currentView={currentView}
-        onThemeToggle={() => setColorMode(colorMode === 'dark' ? 'light' : 'dark')}
-        onCart={() => setCartOpen(true)}
-        onSearch={() => handleNavigate('shop')}
-        onNavigate={handleNavigate}
-        onMenu={() => setMenuOpen(!menuOpen)}
-        menuOpen={menuOpen}
-        onQuote={() => handleQuoteRequest(null)}
-        onTrack={() => setTrackModalOpen(true)}
-      />
-
-      <main className="main-content">
-        {currentView === 'home' && (
-          <HomeView
-            settings={settings}
-            products={products}
-            categories={categories}
-            wishlist={wishlist}
-            compare={compare}
-            onProduct={setActiveProduct}
-            onAdd={handleAddToCart}
-            onWish={handleToggleWishlist}
-            onCompare={handleToggleCompare}
-            onShop={(cat) => handleNavigate('shop', cat)}
-            onQuote={handleQuoteRequest}
-          />
+        {subtotal < settings.freeShippingThreshold ? (
+          <div className="shipping-progress">
+            <p>Add {formatMoney(settings.freeShippingThreshold - subtotal, settings)} for complimentary shipping</p>
+            <div><span style={{ width: `${progress}%` }} /></div>
+          </div>
+        ) : (
+          <div className="shipping-earned">✓ You&apos;ve unlocked complimentary shipping</div>
         )}
-        {currentView === 'shop' && (
-          <ShopView
-            products={products}
-            categories={categories}
-            settings={settings}
-            wishlist={wishlist}
-            compare={compare}
-            onProduct={setActiveProduct}
-            onAdd={handleAddToCart}
-            onWish={handleToggleWishlist}
-            onCompare={handleToggleCompare}
-            initialCategory={selectedCategory}
-          />
+
+        <div className="cart-lines">
+          {lines.length ? (
+            lines.map(({ product, qty }) => (
+              <div className="cart-line" key={product.id}>
+                <StoreImage src={product.image} alt="" loading="lazy" />
+                <div>
+                  <p>{product.category}</p>
+                  <h3>{product.name}</h3>
+                  <span>{product.color}</span>
+                  <div className="mini-stepper">
+                    <button onClick={() => onQty(product.id, Math.max(1, qty - 1))}>−</button>
+                    <span>{qty}</span>
+                    <button onClick={() => onQty(product.id, qty + 1)}>＋</button>
+                    <button className="remove-line" onClick={() => onRemove(product.id)}>Remove</button>
+                  </div>
+                </div>
+                <strong>{formatMoney(product.price * qty, settings)}</strong>
+              </div>
+            ))
+          ) : (
+            <div className="empty-cart"><p>Your bag is currently empty.</p></div>
+          )}
+        </div>
+
+        {lines.length > 0 && (
+          <div className="drawer-footer">
+            <div className="cart-subtotal">
+              <span>Subtotal</span>
+              <strong>{formatMoney(subtotal, settings)}</strong>
+            </div>
+            <button className="button button-dark full-width" onClick={onCheckout}>
+              Proceed to checkout <span>→</span>
+            </button>
+          </div>
         )}
-      </main>
-
-      <ProductModal
-        product={activeProduct}
-        settings={settings}
-        categories={categories}
-        onClose={() => setActiveProduct(null)}
-        onAdd={handleAddToCart}
-        wished={wishlist.includes(activeProduct?.id)}
-        onWish={handleToggleWishlist}
-        onQuote={handleQuoteRequest}
-        onCompare={handleToggleCompare}
-        compared={compare.includes(activeProduct?.id)}
-        onCategory={(cat) => {
-          setActiveProduct(null);
-          handleNavigate('shop', cat);
-        }}
-      />
-
-      <QuoteModal
-        open={quoteModalOpen}
-        product={quoteProduct}
-        categories={categories}
-        settings={settings}
-        onClose={() => setQuoteModalOpen(false)}
-        onSubmit={async (data) => {
-          console.log('Quote Request Submitted:', data);
-          setQuoteModalOpen(false);
-        }}
-      />
-
-      <TrackOrderModal
-        open={trackModalOpen}
-        orders={orders}
-        settings={settings}
-        onClose={() => setTrackModalOpen(false)}
-      />
-
-      <ComparePanel
-        ids={compare}
-        products={products}
-        settings={settings}
-        onRemove={handleToggleCompare}
-        onClear={() => setCompare([])}
-        onClose={() => setCompare([])}
-        onProduct={setActiveProduct}
-      />
-
-      <CartDrawer
-        open={cartOpen}
-        cart={cart}
-        products={products}
-        settings={settings}
-        onClose={() => setCartOpen(false)}
-        onQty={handleCartQty}
-        onRemove={(id) => handleCartQty(id, 0)}
-        onCheckout={() => alert('Proceeding to checkout execution...')}
-      />
-    </div>
+      </aside>
+    </>
   );
 }
