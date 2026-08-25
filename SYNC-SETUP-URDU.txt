@@ -1,0 +1,31 @@
+INAM TECH ZONE — PC + MOBILE AUTO SYNC
+=======================================
+
+یہ update تمام devices کو ایک ہی Google Sheet کے ساتھ connect کرتی ہے۔
+صرف ایک دفعہ نیچے والی configuration ضروری ہے:
+
+1) GOOGLE APPS SCRIPT UPDATE
+   - اپنے موجودہ Apps Script project کو کھولیں۔
+   - package کے google-apps-script/Code.gs کا مکمل code copy کرکے وہاں paste کریں۔
+   - Save کریں۔
+   - Deploy > Manage deployments > Edit کھولیں۔
+   - Version میں New version منتخب کرکے Deploy کریں۔
+   - Web app کا /exec URL copy کریں۔
+   - اگر backend پہلے setup ہے تو setupStore() دوبارہ run نہ کریں۔
+
+2) VERCEL GLOBAL CONNECTION
+   - Vercel میں INAM TECH ZONE project کھولیں۔
+   - Settings > Environment Variables کھولیں۔
+   - Variable name: INAM_API_ENDPOINT
+   - Value: Apps Script کا مکمل /exec URL
+   - Production, Preview اور Development تینوں select کریں۔
+   - Save کرکے latest deployment کو Redeploy کریں۔
+
+3) CHECK
+   - PC اور mobile پر updated website کھولیں۔
+   - دونوں devices پر admin login الگ الگ کریں۔
+   - PC سے test product add/edit کریں۔
+   - Mobile active ہو تو تبدیلی تقریباً 3 seconds میں نظر آئے گی۔
+   - Background mobile دوبارہ کھولتے ہی فوراً latest data load کرے گا۔
+
+اہم: Apps Script Web app access "Anyone" اور Execute as "Me" ہونا چاہیے۔

@@ -17,7 +17,7 @@ Batch extracted folder کو Git safe-directory list میں خود شامل کر�
 7. setupStore('your-email', 'minimum-10-character-password') ایک دفعہ run کریں۔
 8. Deploy > New deployment > Web app کریں۔ Execute as Me اور Access Anyone رکھیں۔
 9. ملنے والا /exec URL Vercel Environment Variable میں شامل کریں:
-   NEXT_PUBLIC_INAM_API_ENDPOINT = Apps Script /exec URL
+   INAM_API_ENDPOINT = Apps Script /exec URL
 10. Production, Preview اور Development select کرکے Vercel Redeploy کریں۔
 
 Website pages:
@@ -30,6 +30,6 @@ Website pages:
 
 اہم:
 - Mobile اور desktop ایک ہی Google Sheet استعمال کریں گے۔
-- Active device پر نئی product تقریباً 10 seconds میں خود نظر آئے گی۔
+- Active device پر نئی product تقریباً 3 seconds میں خود نظر آئے گی۔
 - Product preview image crop یا extra zoom نہیں ہوگی۔
 - ہر save، delete، quote اور error کا واضح message نظر آئے گا۔

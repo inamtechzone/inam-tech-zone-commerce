@@ -1,5 +1,5 @@
 /**
- * INAM TECH ZONE Commerce API 2.2
+ * INAM TECH ZONE Commerce API 3.0
  * Run setupStore(email, password) once, then deploy as a Web app.
  * Execute as: Me. Access: Anyone.
  */
@@ -18,7 +18,7 @@ function doGet(e) {
   try {
     const action = String((e && e.parameter && e.parameter.action) || 'health');
     if (action === 'bootstrap') return jsonResponse_({ ok: true, ...getBootstrap_() });
-    return jsonResponse_({ ok: true, service: 'INAM TECH ZONE Commerce API', version: '2.2.0', configured: Boolean(getProperty_('SPREADSHEET_ID')) });
+    return jsonResponse_({ ok: true, service: 'INAM TECH ZONE Commerce API', version: '3.0.0', configured: Boolean(getProperty_('SPREADSHEET_ID')), revision: currentRevision_() });
   } catch (error) { return jsonResponse_({ ok: false, error: error.message }); }
 }
 
@@ -70,6 +70,7 @@ function setupStore(adminEmail, adminPassword) {
     ADMIN_PASSWORD_HASH: hash_(salt + String(adminPassword)),
     TOKEN_SECRET: Utilities.getUuid() + Utilities.getUuid(),
   });
+  if (!props.getProperty('SYNC_REVISION')) touchSync_();
   return { spreadsheetUrl: spreadsheet.getUrl(), spreadsheetId: spreadsheetId, driveFolderId: folderId };
 }
 
@@ -80,7 +81,7 @@ function getBootstrap_() {
     categories: readObjects_('Categories').map(normalizeBooleans_),
     coupons: readObjects_('Coupons').map(normalizeBooleans_).filter(function(item) { return item.active !== false; }),
     settings: settings,
-    syncMeta: { catalogInitialized: catalogInitialized_(), serverTime: new Date().toISOString() },
+    syncMeta: { catalogInitialized: catalogInitialized_(), serverTime: new Date().toISOString(), revision: currentRevision_() },
   };
 }
 
@@ -94,7 +95,7 @@ function getAdminData_() {
     quotes: readObjects_('Quotes'),
     coupons: readObjects_('Coupons').map(normalizeBooleans_),
     settings: publicSettings_(),
-    syncMeta: { catalogInitialized: catalogInitialized_(), serverTime: new Date().toISOString() },
+    syncMeta: { catalogInitialized: catalogInitialized_(), serverTime: new Date().toISOString(), revision: currentRevision_() },
   };
 }
 
@@ -123,6 +124,7 @@ function initializeCatalog_(body) {
   (body.categories || []).forEach(saveCategory_);
   (body.coupons || []).forEach(saveCoupon_);
   markCatalogInitialized_();
+  touchSync_();
   return { ok: true, initialized: true };
 }
 
@@ -133,6 +135,7 @@ function saveProduct_(product) {
   const row = { ...product, image: images[0], gallery: JSON.stringify(images.slice(1)), details: JSON.stringify(product.details || []), updatedAt: new Date().toISOString() };
   upsertObject_('Products', 'id', product.id, row);
   markCatalogInitialized_();
+  touchSync_();
   return { ok: true, product: product };
 }
 
@@ -141,14 +144,14 @@ function deleteProduct_(id) { const result = deleteRecord_('Products', 'id', id)
 function saveCategory_(category) {
   if (!category || !category.id || !category.name) throw new Error('Category ID and name are required.');
   const row = { id: clean_(category.id, 80), name: clean_(category.name, 120), slug: clean_(category.slug || String(category.name).toLowerCase().replace(/\W+/g, '-'), 140), active: Boolean(category.active), updatedAt: new Date().toISOString() };
-  upsertObject_('Categories', 'id', row.id, row); markCatalogInitialized_(); return { ok: true, category: row };
+  upsertObject_('Categories', 'id', row.id, row); markCatalogInitialized_(); touchSync_(); return { ok: true, category: row };
 }
 
 function saveCoupon_(coupon) {
   if (!coupon || !coupon.code) throw new Error('Promotion code is required.');
   if (['percent','fixed','shipping'].indexOf(coupon.type) < 0) throw new Error('Invalid promotion type.');
   const row = { code: clean_(coupon.code, 40).toUpperCase(), type: coupon.type, value: Math.max(0, Number(coupon.value || 0)), active: Boolean(coupon.active), uses: Math.max(0, Number(coupon.uses || 0)), updatedAt: new Date().toISOString() };
-  upsertObject_('Coupons', 'code', row.code, row); markCatalogInitialized_(); return { ok: true, coupon: row };
+  upsertObject_('Coupons', 'code', row.code, row); markCatalogInitialized_(); touchSync_(); return { ok: true, coupon: row };
 }
 
 function createOrder_(order) {
@@ -158,7 +161,7 @@ function createOrder_(order) {
     const sheet = getSheet_('Orders');
     const id = nextOrderId_(sheet);
     const row = { id: id, date: new Date().toISOString().slice(0,10), customer: clean_(order.customer,120), email: clean_(order.email,160), total: Number(order.total), status: 'Processing', payment: clean_(order.payment || 'Pending',30), items: Number(order.items || 0), coupon: clean_(order.coupon || '',40), payload: JSON.stringify(order), updatedAt: new Date().toISOString(), trackingNumber: '', courier: '', estimatedDelivery: '', timeline: JSON.stringify([{ stage:'Confirmed', date:new Date().toISOString(), note:'Order received.' }]) };
-    appendObject_(sheet, STORE_SHEETS.Orders, row); upsertCustomer_(order, row); adjustInventory_(order.lines || []);
+    appendObject_(sheet, STORE_SHEETS.Orders, row); upsertCustomer_(order, row); adjustInventory_(order.lines || []); touchSync_();
     return { ok: true, orderId: id };
   } finally { lock.releaseLock(); }
 }
@@ -166,7 +169,7 @@ function createOrder_(order) {
 function createQuote_(quote) {
   if (!quote || !quote.customer || !quote.email || !quote.phone) throw new Error('Name, email and phone are required.');
   const row = { id: clean_(quote.id || ('QT-' + Utilities.getUuid().slice(0,8).toUpperCase()),40), date: clean_(quote.date || new Date().toISOString().slice(0,10),20), customer: clean_(quote.customer,120), company: clean_(quote.company,120), email: clean_(quote.email,160), phone: clean_(quote.phone,60), projectType: clean_(quote.projectType,100), product: clean_(quote.product,180), productId: clean_(quote.productId,80), productLabel: clean_(quote.productLabel,180), quantity: Math.max(1,Number(quote.quantity || 1)), message: clean_(quote.message,2000), status:'New', updatedAt:new Date().toISOString() };
-  appendObject_(getSheet_('Quotes'), STORE_SHEETS.Quotes, row); return { ok:true, quoteId:row.id };
+  appendObject_(getSheet_('Quotes'), STORE_SHEETS.Quotes, row); touchSync_(); return { ok:true, quoteId:row.id };
 }
 
 function trackOrder_(orderId, email) {
@@ -180,7 +183,7 @@ function trackOrder_(orderId, email) {
 function updateQuote_(id, status) {
   if (['New','Contacted','Quoted','Won','Closed'].indexOf(status) < 0) throw new Error('Invalid quote status.');
   const quote = findRecord_('Quotes','id',id); if (!quote) throw new Error('Quote not found.');
-  quote.status = status; quote.updatedAt = new Date().toISOString(); upsertObject_('Quotes','id',id,quote); return { ok:true, quoteId:id, status:status };
+  quote.status = status; quote.updatedAt = new Date().toISOString(); upsertObject_('Quotes','id',id,quote); touchSync_(); return { ok:true, quoteId:id, status:status };
 }
 
 function updateOrder_(id, status) {
@@ -188,7 +191,7 @@ function updateOrder_(id, status) {
   const order = findRecord_('Orders','id',id); if (!order) throw new Error('Order not found.');
   let timeline = []; try { timeline = JSON.parse(order.timeline || '[]'); } catch (error) {}
   order.status = status; order.updatedAt = new Date().toISOString(); timeline.push({stage:status,date:order.updatedAt,note:'Status updated by administrator.'}); order.timeline = JSON.stringify(timeline);
-  upsertObject_('Orders','id',id,order); return { ok:true };
+  upsertObject_('Orders','id',id,order); touchSync_(); return { ok:true };
 }
 
 function updateOrderDetails_(draft) {
@@ -196,13 +199,14 @@ function updateOrderDetails_(draft) {
   const order = findRecord_('Orders','id',draft.id); if (!order) throw new Error('Order not found.');
   if (['Processing','On hold','Packed','Shipped','Delivered','Cancelled'].indexOf(draft.status) < 0) throw new Error('Invalid order status.');
   order.status=draft.status; order.trackingNumber=clean_(draft.trackingNumber || '',100); order.courier=clean_(draft.courier || '',100); order.estimatedDelivery=clean_(draft.estimatedDelivery || '',30); order.timeline=JSON.stringify(draft.timeline || []); order.payload=JSON.stringify(draft); order.updatedAt=new Date().toISOString();
-  upsertObject_('Orders','id',draft.id,order); return { ok:true, order:draft };
+  upsertObject_('Orders','id',draft.id,order); touchSync_(); return { ok:true, order:draft };
 }
 
 function deleteOrder_(id) { const order=findRecord_('Orders','id',id); if(!order) throw new Error('Order not found.'); const result=deleteRecord_('Orders','id',id); recalculateCustomer_(order.email); return result; }
 
 function saveSettings_(settings) {
   Object.keys(settings || {}).forEach(function(key) { if (['adminEmail','apiEndpoint'].indexOf(key) >= 0) return; upsertObject_('Settings','key',key,{key:key,value:JSON.stringify(settings[key]),updatedAt:new Date().toISOString()}); });
+  touchSync_();
   return { ok:true };
 }
 
@@ -216,7 +220,7 @@ function uploadImage_(body) {
 function deleteRecord_(sheetName,keyName,keyValue) {
   if(!keyValue) throw new Error('A record ID is required.'); const sheet=getSheet_(sheetName); const values=sheet.getDataRange().getValues(); const column=(values[0] || []).indexOf(keyName); if(column < 0) throw new Error('Record key column was not found.');
   let deleted=false; for(let row=values.length-1;row>=1;row--){if(String(values[row][column])===String(keyValue)){sheet.deleteRow(row+1);deleted=true;}}
-  if(!deleted) throw new Error('Record not found.'); if(['Products','Categories','Coupons'].indexOf(sheetName)>=0) markCatalogInitialized_(); return {ok:true,deleted:String(keyValue)};
+  if(!deleted) throw new Error('Record not found.'); if(['Products','Categories','Coupons'].indexOf(sheetName)>=0) markCatalogInitialized_(); touchSync_(); return {ok:true,deleted:String(keyValue)};
 }
 
 function recalculateCustomer_(email) {
@@ -248,6 +252,8 @@ function parseOrder_(item){let payload={};let timeline=[];try{payload=JSON.parse
 function normalizeBooleans_(item){Object.keys(item).forEach(function(key){if(item[key]==='true')item[key]=true;if(item[key]==='false')item[key]=false;});return item;}
 function nextOrderId_(sheet){return 'ITZ-' + (1000 + Math.max(1,sheet.getLastRow()));}
 function getProperty_(name){return PropertiesService.getScriptProperties().getProperty(name);}
+function currentRevision_(){return getProperty_('SYNC_REVISION') || 'initial';}
+function touchSync_(){const revision=Date.now().toString(36)+'-'+Utilities.getUuid().slice(0,8); PropertiesService.getScriptProperties().setProperty('SYNC_REVISION',revision); return revision;}
 function clean_(value,max){return String(value==null?'':value).replace(/[<>]/g,'').slice(0,max);}
 function hash_(value){return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,value,Utilities.Charset.UTF_8));}
 function sign_(value){return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(value,getProperty_('TOKEN_SECRET')));}

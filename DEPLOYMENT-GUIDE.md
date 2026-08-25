@@ -31,7 +31,7 @@ For future backend updates, use **Deploy → Manage deployments → Edit → New
 Import the GitHub repository and add these Environment Variables:
 
 ```text
-NEXT_PUBLIC_INAM_API_ENDPOINT=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+INAM_API_ENDPOINT=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
 INAM_SITE_URL=https://your-domain.com
 ```
 
@@ -41,7 +41,7 @@ Apply both variables to Production, Preview and Development, then redeploy.
 
 - `/products`, `/solutions`, `/services`, `/support` and `/admin` open directly.
 - Admin header shows **Google synced**.
-- Create a test product on one device and confirm it appears on another active device within about 10 seconds.
+- Create a test product on one device and confirm it appears on another active device within about 3 seconds.
 - Test quote submission and order tracking.
 
 Do not commit passwords, tokens, Sheet IDs or Drive IDs.

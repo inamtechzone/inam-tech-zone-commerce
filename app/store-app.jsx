@@ -13,8 +13,8 @@ import {
 } from './store-data';
 
 const storageKey = (name) => `inam-tech-zone:v3:${name}`;
-const configuredApiEndpoint = String(process.env.NEXT_PUBLIC_INAM_API_ENDPOINT || '').trim();
-const SHARED_DATA_REFRESH_MS = 10000;
+const serverSyncProxy = '/api/store-sync';
+const SHARED_DATA_REFRESH_MS = 3000;
 const requiredNavigation = ['Home', 'Products', 'Solutions', 'Services', 'Support'];
 const publicRoutes = { home: '/', shop: '/products', solutions: '/solutions', services: '/services', support: '/support' };
 const viewForPath = (path) => ({ '/products': 'shop', '/solutions': 'solutions', '/services': 'services', '/support': 'support' }[path] || 'home');
@@ -83,8 +83,8 @@ async function apiCall(endpoint, action, payload = {}, token = '') {
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error(`Server returned ${response.status}`);
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ ok: false, error: `Invalid synchronization response (${response.status})` }));
+    if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
     if (!data.ok) throw new Error(data.error || 'Request failed');
     return data;
   } catch (error) {
@@ -95,8 +95,8 @@ async function apiCall(endpoint, action, payload = {}, token = '') {
 
 async function fetchBootstrap(endpoint) {
   const response = await fetch(`${endpoint}?action=bootstrap&_=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Server returned ${response.status}`);
-  const data = await response.json();
+  const data = await response.json().catch(() => ({ ok: false, error: `Invalid synchronization response (${response.status})` }));
+  if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
   if (!data.ok) throw new Error(data.error || 'Could not load shared store data.');
   return data;
 }
@@ -526,7 +526,7 @@ function AdminSettings({ settings, setSettings, onSave }) {
     {tab === 'Brand' && <div className="settings-section"><h3>Identity & storefront hero</h3><div className="form-grid"><label>Store name<input value={draft.brandName} onChange={(e) => set('brandName', e.target.value)} /></label><label>Logo monogram<input value={draft.brandMark} maxLength="4" onChange={(e) => set('brandMark', e.target.value.toUpperCase())} /></label><label className="full">Hero eyebrow<input value={draft.heroEyebrow} onChange={(e) => set('heroEyebrow', e.target.value)} /></label><label>Hero heading<input value={draft.heroTitle} onChange={(e) => set('heroTitle', e.target.value)} /></label><label>Hero accent line<input value={draft.heroAccent} onChange={(e) => set('heroAccent', e.target.value)} /></label><label className="full">Hero description<textarea rows="3" value={draft.heroDescription} onChange={(e) => set('heroDescription', e.target.value)} /></label><label className="full">Hero image URL<input value={draft.heroImage} onChange={(e) => set('heroImage', e.target.value)} /></label><label>Primary color<div className="color-input"><input type="color" value={draft.primaryColor} onChange={(e) => set('primaryColor', e.target.value)} /><input value={draft.primaryColor} onChange={(e) => set('primaryColor', e.target.value)} /></div></label><label>Accent color<div className="color-input"><input type="color" value={draft.accentColor} onChange={(e) => set('accentColor', e.target.value)} /><input value={draft.accentColor} onChange={(e) => set('accentColor', e.target.value)} /></div></label><label>Background color<div className="color-input"><input type="color" value={draft.backgroundColor} onChange={(e) => set('backgroundColor', e.target.value)} /><input value={draft.backgroundColor} onChange={(e) => set('backgroundColor', e.target.value)} /></div></label></div></div>}
     {tab === 'Header & footer' && <div className="settings-section"><h3>Announcement and navigation</h3><div className="form-grid"><label className="full">Announcement bar<input value={draft.announcement} onChange={(e) => set('announcement', e.target.value)} /></label><label className="full">Announcement side note<input value={draft.announcementNote} onChange={(e) => set('announcementNote', e.target.value)} /></label><label className="full">Header links (comma separated)<input value={draft.headerLinks.join(', ')} onChange={(e) => set('headerLinks', e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} /></label></div><h3>Footer, contact and social content</h3><div className="form-grid"><label className="full">Newsletter heading<input value={draft.footerHeadline} onChange={(e) => set('footerHeadline', e.target.value)} /></label><label className="full">Newsletter text<textarea rows="3" value={draft.footerText} onChange={(e) => set('footerText', e.target.value)} /></label><label>Support email<input type="email" value={draft.supportEmail} onChange={(e) => set('supportEmail', e.target.value)} /></label><label>Support phone<input value={draft.supportPhone} onChange={(e) => set('supportPhone', e.target.value)} /></label><label>WhatsApp number<input value={draft.whatsapp || ''} onChange={(e) => set('whatsapp', e.target.value)} /></label><label>Business hours<input value={draft.businessHours || ''} onChange={(e) => set('businessHours', e.target.value)} /></label><label className="full">Business address<input value={draft.address} onChange={(e) => set('address', e.target.value)} /></label><label>Instagram URL<input value={draft.instagram} onChange={(e) => set('instagram', e.target.value)} /></label><label>Facebook URL<input value={draft.facebook || ''} onChange={(e) => set('facebook', e.target.value)} /></label><label>YouTube URL<input value={draft.youtube} onChange={(e) => set('youtube', e.target.value)} /></label><label>Copyright text<input value={draft.footerCopyright} onChange={(e) => set('footerCopyright', e.target.value)} /></label></div></div>}
     {tab === 'Commerce' && <div className="settings-section"><h3>Pricing, tax and fulfillment</h3><div className="form-grid"><label>Currency<select value={draft.currency} onChange={(e) => set('currency', e.target.value)}><option>PKR</option><option>USD</option><option>AED</option><option>SAR</option><option>GBP</option><option>EUR</option></select></label><label>Tax rate (%)<input type="number" step=".1" value={draft.taxRate} onChange={(e) => set('taxRate', Number(e.target.value))} /></label><label>Free shipping threshold<input type="number" value={draft.freeShippingThreshold} onChange={(e) => set('freeShippingThreshold', Number(e.target.value))} /></label><label>Flat shipping rate<input type="number" value={draft.flatShippingRate} onChange={(e) => set('flatShippingRate', Number(e.target.value))} /></label></div><h3>Storefront tools and payment options</h3><div className="toggle-list"><label><span><b>Project quote requests</b><small>Show B2B/project inquiry forms throughout the storefront.</small></span><input type="checkbox" checked={draft.quoteEnabled} onChange={(e) => set('quoteEnabled', e.target.checked)} /></label><label><span><b>Product comparison</b><small>Allow customers to compare up to three technical products.</small></span><input type="checkbox" checked={draft.compareEnabled} onChange={(e) => set('compareEnabled', e.target.checked)} /></label><label><span><b>Technical downloads</b><small>Generate downloadable product datasheets.</small></span><input type="checkbox" checked={draft.technicalDownloadsEnabled} onChange={(e) => set('technicalDownloadsEnabled', e.target.checked)} /></label><label><span><b>Project pricing labels</b><small>Highlight installer and quantity pricing workflows.</small></span><input type="checkbox" checked={draft.projectPricingEnabled} onChange={(e) => set('projectPricingEnabled', e.target.checked)} /></label><label><span><b>Credit / debit card</b><small>Requires your secure payment web endpoint.</small></span><input type="checkbox" checked={draft.cardEnabled} onChange={(e) => set('cardEnabled', e.target.checked)} /></label><label><span><b>Cash on delivery</b><small>Allow payment when the order arrives.</small></span><input type="checkbox" checked={draft.codEnabled} onChange={(e) => set('codEnabled', e.target.checked)} /></label><label><span><b>Bank transfer</b><small>Show transfer instructions after checkout.</small></span><input type="checkbox" checked={draft.bankEnabled} onChange={(e) => set('bankEnabled', e.target.checked)} /></label><label><span><b>Maintenance mode</b><small>Temporarily hide the public storefront.</small></span><input type="checkbox" checked={draft.maintenanceMode} onChange={(e) => set('maintenanceMode', e.target.checked)} /></label></div></div>}
-    {tab === 'Integrations' && <div className="settings-section"><h3>Google workspace backend</h3><div className="integration-note"><span>G</span><div><b>Google Apps Script + Sheets + Drive</b><p>Use one deployed web app URL on Vercel so desktop and mobile always read the same products, orders and quotes.</p></div></div><div className="form-grid"><label className="full">Apps Script web app URL<input value={draft.apiEndpoint} readOnly={Boolean(configuredApiEndpoint)} onChange={(e) => set('apiEndpoint', e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" />{configuredApiEndpoint && <small className="managed-setting">Managed globally by Vercel environment variable</small>}</label><label className="full">Google Drive folder ID<input value={draft.driveFolderId} onChange={(e) => set('driveFolderId', e.target.value)} placeholder="Created automatically by setupStore()" /></label><label>Administrator email<input type="email" value={draft.adminEmail} onChange={(e) => set('adminEmail', e.target.value)} /></label></div><div className="platform-grid"><div><b>GitHub</b><span>Workflow ready</span><small>Version control + automated build</small></div><div><b>Vercel</b><span>{configuredApiEndpoint ? 'Global endpoint active' : 'Environment URL required'}</span><small>One connection for every device</small></div><div><b>Google Sheets</b><span>{draft.apiEndpoint ? 'Connected URL saved' : 'Awaiting setup'}</span><small>Authoritative commerce data</small></div></div></div>}
+    {tab === 'Integrations' && <div className="settings-section"><h3>Google workspace backend</h3><div className="integration-note"><span>G</span><div><b>Google Apps Script + Sheets + Drive</b><p>Every device now connects through one Vercel synchronization gateway. Add the Apps Script URL to Vercel once and PC, mobile and laptop automatically use the same Google Sheet.</p></div></div><div className="form-grid"><label className="full">Shared synchronization gateway<input value="Vercel → Google Apps Script" readOnly /><small className="managed-setting">Managed globally with INAM_API_ENDPOINT in Vercel—never separately on each device.</small></label><label className="full">Google Drive folder ID<input value={draft.driveFolderId} onChange={(e) => set('driveFolderId', e.target.value)} placeholder="Created automatically by setupStore()" /></label><label>Administrator email<input type="email" value={draft.adminEmail} onChange={(e) => set('adminEmail', e.target.value)} /></label></div><div className="platform-grid"><div><b>GitHub</b><span>Workflow ready</span><small>Version control + automated build</small></div><div><b>Vercel</b><span>Shared gateway active</span><small>One connection for every device</small></div><div><b>Google Sheets</b><span>Authoritative source</span><small>Products and records synchronized</small></div></div></div>}
   </section></div></div>;
 }
 
@@ -551,6 +551,7 @@ function AdminApp({ products, setProducts, orders, setOrders, quotes, setQuotes,
     onSyncState({ status: 'syncing', message: 'Saving to Google Sheets…' });
     try {
       const result = await apiCall(settings.apiEndpoint, action, payload, token);
+      await onRefresh?.({ silent: true });
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       onSyncState({ status: 'connected', message: `Saved and synced ${time}` });
       toast(`${successMessage} · available on all connected devices`, 'success');
@@ -567,8 +568,9 @@ function AdminApp({ products, setProducts, orders, setOrders, quotes, setQuotes,
   const duplicateProduct = async (product) => { const copy = { ...product, id: uid('PRD'), slug: `${product.slug}-copy`, sku: `${product.sku}-COPY`, name: `${product.name} Copy`, status: 'draft', featured: false }; try { await sync('saveProduct', { product: copy }, 'Product duplicated as draft'); setProducts([copy, ...products]); } catch {} };
   const saveOrderDetails = async (draft) => { await sync('updateOrderDetails', { order: draft }, `Order ${draft.id} tracking saved successfully`); setOrders(orders.map((item) => item.id === draft.id ? draft : item)); setOrderPreview(draft); };
   const saveSettings = async (next) => {
-    if (next.apiEndpoint !== settings.apiEndpoint) { setSettings(next); setToken(''); toast('Connection URL saved. Sign in to the Google-backed admin again, and add this URL in Vercel as NEXT_PUBLIC_INAM_API_ENDPOINT for every device.', 'warning', 'Connection updated'); return; }
+    if (next.apiEndpoint !== settings.apiEndpoint) { setSettings(next); setToken(''); toast('Connection URL saved. Sign in again. For automatic synchronization on every device, add this URL in Vercel as INAM_API_ENDPOINT.', 'warning', 'Connection updated'); return; }
     await sync('saveSettings', { settings: next }, 'Store settings saved successfully');
+    setSettings(next);
   };
   const upload = async (file) => {
     const dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
@@ -591,7 +593,7 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
   const [coupons, setCoupons] = useStoredState('coupons', couponSeed);
   const [quotes, setQuotes] = useStoredState('quotes', quoteSeed);
   const [storedSettings, setSettings] = useStoredState('settings', defaultSettings);
-  const settings = useMemo(() => ({ ...storedSettings, apiEndpoint: configuredApiEndpoint || storedSettings.apiEndpoint || '' }), [storedSettings]);
+  const settings = useMemo(() => ({ ...storedSettings, apiEndpoint: serverSyncProxy }), [storedSettings]);
   const [cart, setCart] = useStoredState('cart', []);
   const [wishlist, setWishlist] = useStoredState('wishlist', []);
   const [compare, setCompare] = useStoredState('compare', []);
@@ -611,6 +613,10 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
   const [syncState, setSyncState] = useState({ status: settings.apiEndpoint ? 'syncing' : 'local', message: settings.apiEndpoint ? 'Connecting…' : 'Google backend not connected' });
   const [placedOrder, setPlacedOrder] = useState(null);
   const sharedDataRef = useRef({ products, categories, coupons });
+  const storeRequestRef = useRef(0);
+  const adminRequestRef = useRef(0);
+  const publicRevisionRef = useRef('');
+  const adminRevisionRef = useRef('');
   useEffect(() => { sharedDataRef.current = { products, categories, coupons }; }, [products, categories, coupons]);
   const toast = useCallback((message, type = 'success', title = '') => setNotice({ id: Date.now(), message, type, title }), []);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(null), notice.type === 'error' ? 7000 : 4800); return () => clearTimeout(timer); }, [notice]);
@@ -627,15 +633,22 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
   }, [setCategories, setCoupons, setProducts, setSettings]);
   const refreshStore = useCallback(async ({ notify = false, silent = false } = {}) => {
     if (!settings.apiEndpoint) { setSyncState({ status: 'local', message: 'Google backend not connected' }); return null; }
+    const requestId = ++storeRequestRef.current;
     if (!silent) setSyncState({ status: 'syncing', message: 'Reading shared store data…' });
     try {
       const data = await fetchBootstrap(settings.apiEndpoint);
-      applyStoreData(data);
+      if (requestId !== storeRequestRef.current) return null;
+      const revision = String(data.syncMeta?.revision || data.syncMeta?.serverTime || '');
+      if (!revision || publicRevisionRef.current !== revision) {
+        applyStoreData(data);
+        publicRevisionRef.current = revision;
+      }
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setSyncState({ status: 'connected', message: `Last sync ${time}` });
       if (notify) toast('Latest products, categories and promotions loaded.', 'success', 'Store synchronized');
       return data;
     } catch (error) {
+      if (requestId !== storeRequestRef.current) return null;
       setSyncState({ status: 'error', message: error.message || 'Could not reach Google Sheets' });
       if (notify) toast(error.message || 'Could not reach Google Sheets.', 'error', 'Synchronization failed');
       return null;
@@ -643,6 +656,7 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
   }, [applyStoreData, settings.apiEndpoint, toast]);
   const refreshAdmin = useCallback(async ({ notify = false, silent = false } = {}) => {
     if (mode !== 'admin' || !token || !settings.apiEndpoint) return refreshStore({ notify, silent });
+    const requestId = ++adminRequestRef.current;
     if (!silent) setSyncState({ status: 'syncing', message: 'Synchronizing administration data…' });
     try {
       let data = await apiCall(settings.apiEndpoint, 'getAdminData', {}, token);
@@ -651,18 +665,24 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
         data = await apiCall(settings.apiEndpoint, 'getAdminData', {}, token);
         toast('Existing catalog was published to Google Sheets for all devices.', 'success', 'First synchronization complete');
       }
-      if (Array.isArray(data.products)) setProducts(data.products);
-      if (Array.isArray(data.categories)) setCategories(data.categories);
-      if (Array.isArray(data.orders)) setOrders(data.orders);
-      if (Array.isArray(data.customers)) setCustomers(data.customers);
-      if (Array.isArray(data.quotes)) setQuotes(data.quotes);
-      if (Array.isArray(data.coupons)) setCoupons(data.coupons);
-      if (data.settings && typeof data.settings === 'object') setSettings((current) => ({ ...current, ...data.settings, apiEndpoint: current.apiEndpoint }));
+      if (requestId !== adminRequestRef.current) return null;
+      const revision = String(data.syncMeta?.revision || data.syncMeta?.serverTime || '');
+      if (!revision || adminRevisionRef.current !== revision) {
+        if (Array.isArray(data.products)) setProducts(data.products);
+        if (Array.isArray(data.categories)) setCategories(data.categories);
+        if (Array.isArray(data.orders)) setOrders(data.orders);
+        if (Array.isArray(data.customers)) setCustomers(data.customers);
+        if (Array.isArray(data.quotes)) setQuotes(data.quotes);
+        if (Array.isArray(data.coupons)) setCoupons(data.coupons);
+        if (data.settings && typeof data.settings === 'object') setSettings((current) => ({ ...current, ...data.settings, apiEndpoint: current.apiEndpoint }));
+        adminRevisionRef.current = revision;
+      }
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setSyncState({ status: 'connected', message: `Last sync ${time}` });
       if (notify) toast('Products, orders, quotes and settings are up to date.', 'success', 'All data synchronized');
       return data;
     } catch (error) {
+      if (requestId !== adminRequestRef.current) return null;
       setSyncState({ status: 'error', message: error.message || 'Could not reach Google Sheets' });
       if (!silent || notify) toast(error.message || 'Could not load administration data.', 'error', 'Admin synchronization failed');
       return null;
@@ -676,8 +696,8 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
     if (!settings.apiEndpoint) return undefined;
     const interval = setInterval(() => { if (document.visibilityState === 'visible') refreshStore({ silent: true }); }, SHARED_DATA_REFRESH_MS);
     const refreshVisible = () => { if (document.visibilityState === 'visible') refreshStore({ silent: true }); };
-    window.addEventListener('focus', refreshVisible); document.addEventListener('visibilitychange', refreshVisible);
-    return () => { clearInterval(interval); window.removeEventListener('focus', refreshVisible); document.removeEventListener('visibilitychange', refreshVisible); };
+    window.addEventListener('focus', refreshVisible); window.addEventListener('online', refreshVisible); document.addEventListener('visibilitychange', refreshVisible);
+    return () => { clearInterval(interval); window.removeEventListener('focus', refreshVisible); window.removeEventListener('online', refreshVisible); document.removeEventListener('visibilitychange', refreshVisible); };
   }, [mode, refreshStore, settings.apiEndpoint]);
   useEffect(() => {
     if (mode !== 'admin' || !token || !settings.apiEndpoint) return undefined;
@@ -686,8 +706,8 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
     refreshAdmin();
     const interval = setInterval(() => { if (document.visibilityState === 'visible') refreshAdmin({ silent: true }); }, SHARED_DATA_REFRESH_MS);
     const refreshVisible = () => { if (document.visibilityState === 'visible') refreshAdmin({ silent: true }); };
-    window.addEventListener('focus', refreshVisible); document.addEventListener('visibilitychange', refreshVisible);
-    return () => { clearInterval(interval); window.removeEventListener('focus', refreshVisible); document.removeEventListener('visibilitychange', refreshVisible); };
+    window.addEventListener('focus', refreshVisible); window.addEventListener('online', refreshVisible); document.addEventListener('visibilitychange', refreshVisible);
+    return () => { clearInterval(interval); window.removeEventListener('focus', refreshVisible); window.removeEventListener('online', refreshVisible); document.removeEventListener('visibilitychange', refreshVisible); };
   }, [mode, refreshAdmin, settings.apiEndpoint, token]);
   const cartCount = cart.reduce((sum, line) => sum + line.qty, 0);
   const addToCart = (item, qty = 1) => { setCart((lines) => lines.some((l) => l.id === item.id) ? lines.map((l) => l.id === item.id ? { ...l, qty: Math.min(item.stock, l.qty + qty) } : l) : [...lines, { id: item.id, qty }]); toast(`${item.name} added to bag`); };
@@ -754,7 +774,7 @@ export default function StoreApp({ initialMode = 'store', initialView = 'home' }
     '--text-muted': isDark ? '#aeb7cf' : '#5a6274',
   };
   if (mode === 'admin' && !token) return <div className="app-theme-root" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="admin-theme-fab" /><AdminLogin settings={settings} onLogin={login} onCancel={returnToStore} /><Toast notice={notice} onClose={() => setNotice(null)} /></div>;
-  if (mode === 'admin') return <div className="app-theme-root" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="admin-theme-fab" /><AdminApp products={products} setProducts={setProducts} orders={orders} setOrders={setOrders} quotes={quotes} setQuotes={setQuotes} categories={categories} setCategories={setCategories} customers={customers} setCustomers={setCustomers} coupons={coupons} setCoupons={setCoupons} settings={settings} setSettings={setSettings} token={token} setToken={setToken} onStore={returnToStore} toast={toast} syncState={syncState} onSyncState={setSyncState} onRefresh={() => refreshAdmin({ notify: true })} /><Toast notice={notice} onClose={() => setNotice(null)} /></div>;
+  if (mode === 'admin') return <div className="app-theme-root" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="admin-theme-fab" /><AdminApp products={products} setProducts={setProducts} orders={orders} setOrders={setOrders} quotes={quotes} setQuotes={setQuotes} categories={categories} setCategories={setCategories} customers={customers} setCustomers={setCustomers} coupons={coupons} setCoupons={setCoupons} settings={settings} setSettings={setSettings} token={token} setToken={setToken} onStore={returnToStore} toast={toast} syncState={syncState} onSyncState={setSyncState} onRefresh={refreshAdmin} /><Toast notice={notice} onClose={() => setNotice(null)} /></div>;
   if (settings.maintenanceMode) return <div className="maintenance app-theme-root" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="page-theme-fab" /><strong>{settings.brandName}</strong><p className="eyebrow">A short pause</p><h1>We&apos;re making the store even better.</h1><p>Please check back soon or contact <a href={`mailto:${settings.supportEmail}`}>{settings.supportEmail}</a>.</p></div>;
   if (view === 'checkout') return <main className="store-shell standalone-shell" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="page-theme-fab" /><CheckoutView cart={cart} products={products} settings={settings} couponList={coupons} onBack={() => navigate('shop')} onPlaceOrder={placeOrder} /><Toast notice={notice} onClose={() => setNotice(null)} /></main>;
   if (view === 'success') return <main className="store-shell standalone-shell" data-theme={colorMode} style={theme}><ThemeToggle mode={colorMode} onToggle={toggleTheme} className="page-theme-fab" /><SuccessView order={placedOrder} settings={settings} onHome={() => navigate('home')} /><Toast notice={notice} onClose={() => setNotice(null)} /></main>;
