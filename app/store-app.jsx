@@ -153,7 +153,9 @@ function Hero({ settings, featured, onShop, onProduct, onQuote }) {
       <div className="hero-proof"><div><strong>10+</strong><span>Specialist categories</span></div><div><strong>24/7</strong><span>Project assistance</span></div><div><strong>100%</strong><span>Secure checkout</span></div></div>
     </div>
     <div className="hero-visual">
-      <StoreImage src={settings.heroImage} alt={heroProduct.name} />
+      <div className="hero-image-container">
+        <StoreImage src={settings.heroImage} alt={heroProduct.name} />
+      </div>
       <div className="image-badge"><span>ITZ</span> Engineered solutions</div>
       <button className="floating-product" onClick={() => onProduct(heroProduct)}><p>{heroProduct.name}</p><span>{formatMoney(heroProduct.price, settings)} · {heroProduct.badge || 'Project grade'} →</span></button>
     </div>
@@ -277,7 +279,7 @@ function QuoteModal({ open, product, categories, settings, onClose, onSubmit }) 
 function ComparePanel({ ids, products, settings, onRemove, onClear, onClose, onProduct }) {
   const selected = ids.map((id) => products.find((item) => item.id === id)).filter(Boolean);
   if (!selected.length) return null;
-  return <div className="overlay compare-overlay" role="dialog" aria-modal="true" aria-label="Product comparison" onMouseDown={onClose}><section className="compare-panel" onMouseDown={(event) => event.stopPropagation()}><div className="compare-head"><div><p className="eyebrow">Side-by-side</p><h2>Technical comparison</h2><p>Compare up to three products before adding them to your project.</p></div><div><button onClick={onClear}>Clear all</button><button onClick={onClose}>×</button></div></div><div className={`compare-grid count-${selected.length}`}>{selected.map((item) => <article key={item.id}><button className="compare-remove" onClick={() => onRemove(item.id)}>×</button><StoreImage src={item.image} alt={item.name} loading="lazy" /><p>{item.category}</p><button className="compare-title" onClick={() => { onClose(); onProduct(item); }}>{item.name}</button><strong>{formatMoney(item.price, settings)}</strong><dl><div><dt>Brand / model</dt><dd>{item.brand || '—'} · {item.model || '—'}</dd></div><div><dt>Warranty</dt><dd>{item.warranty || 'Contact sales'}</dd></div><div><dt>Availability</dt><dd>{item.leadTime || 'Contact sales'}</dd></div>{(item.details || []).slice(0, 4).map((spec) => <div key={spec}><dt>Specification</dt><dd>{spec}</dd></div>)}</dl></article>)}</div></section></div>;
+  return <div className="overlay compare-overlay" role="dialog" aria-modal="true" aria-label="Product comparison" onMouseDown={onClose}><section className="compare-panel" onMouseDown={(event) => event.stopPropagation()}><div className="compare-head"><div><p className="eyebrow">Side-by-side</p><h2>Technical comparison</h2><p>Compare up to three products before adding them to your project.</p></div><div><button onClick={onClear}>Clear all</button><button onClick={onClose}>×</button></div></div><div className={`compare-grid count-${selected.length}`}>{selected.map((item) => <article key={item.id}><button className="compare-remove" onClick={() => onRemove(item.id)}>×</button><div className="compare-image-box"><StoreImage src={item.image} alt={item.name} loading="lazy" /></div><p>{item.category}</p><button className="compare-title" onClick={() => { onClose(); onProduct(item); }}>{item.name}</button><strong>{formatMoney(item.price, settings)}</strong><dl><div><dt>Brand / model</dt><dd>{item.brand || '—'} · {item.model || '—'}</dd></div><div><dt>Warranty</dt><dd>{item.warranty || 'Contact sales'}</dd></div><div><dt>Availability</dt><dd>{item.leadTime || 'Contact sales'}</dd></div>{(item.details || []).slice(0, 4).map((spec) => <div key={spec}><dt>Specification</dt><dd>{spec}</dd></div>)}</dl></article>)}</div></section></div>;
 }
 
 function TrackOrderModal({ open, orders, settings, onClose }) {
@@ -312,7 +314,7 @@ function CartDrawer({ open, cart, products, settings, onClose, onQty, onRemove, 
   return <><div className={`drawer-scrim ${open ? 'show' : ''}`} onClick={onClose} /><aside className={`cart-drawer ${open ? 'open' : ''}`} aria-hidden={!open}>
     <div className="drawer-header"><div><p className="eyebrow">Your selection</p><h2>Shopping bag <sup>{lines.reduce((n, l) => n + l.qty, 0)}</sup></h2></div><button onClick={onClose} aria-label="Close bag">×</button></div>
     {subtotal < settings.freeShippingThreshold ? <div className="shipping-progress"><p>Add {formatMoney(settings.freeShippingThreshold - subtotal, settings)} for complimentary shipping</p><div><span style={{ width: `${progress}%` }} /></div></div> : <div className="shipping-earned">✓ You&apos;ve unlocked complimentary shipping</div>}
-    <div className="cart-lines">{lines.length ? lines.map(({ product, qty }) => <div className="cart-line" key={product.id}><StoreImage src={product.image} alt="" loading="lazy" /><div><p>{product.category}</p><h3>{product.name}</h3><span>{product.color}</span><div className="mini-stepper"><button onClick={() => onQty(product.id, qty - 1)}>−</button><span>{qty}</span><button onClick={() => onQty(product.id, qty + 1)}>＋</button></div></div><div className="line-price"><strong>{formatMoney(product.price * qty, settings)}</strong><button onClick={() => onRemove(product.id)}>Remove</button></div></div>) : <div className="empty-state"><span>🎒</span><h3>Your bag is empty</h3><p>Browse our catalog to add products.</p></div>}</div>
+    <div className="cart-lines">{lines.length ? lines.map(({ product, qty }) => <div className="cart-line" key={product.id}><div className="cart-thumb"><StoreImage src={product.image} alt="" loading="lazy" /></div><div><p>{product.category}</p><h3>{product.name}</h3><span>{product.color}</span><div className="mini-stepper"><button onClick={() => onQty(product.id, qty - 1)}>−</button><span>{qty}</span><button onClick={() => onQty(product.id, qty + 1)}>＋</button></div></div><div className="line-price"><strong>{formatMoney(product.price * qty, settings)}</strong><button onClick={() => onRemove(product.id)}>Remove</button></div></div>) : <div className="empty-state"><span>🎒</span><h3>Your bag is empty</h3><p>Browse our catalog to add products.</p></div>}</div>
     {Boolean(lines.length) && <div className="drawer-footer"><div className="summary-row"><span>Subtotal</span><strong>{formatMoney(subtotal, settings)}</strong></div><p className="summary-note">Taxes and shipping calculated during checkout.</p><button className="button button-dark full" onClick={onCheckout}>Proceed to checkout <span>→</span></button></div>}
   </aside></>;
 }
@@ -387,6 +389,117 @@ export default function StoreFront() {
 
   return (
     <div className="app-shell">
+      {/* تمام امیجز کے سائز کو درست اور رسپانسو رکھنے کا Global CSS */}
+      <style html-global="true">{`
+        .store-image {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          object-position: center !important;
+          display: block !important;
+        }
+
+        .store-image-fallback {
+          object-fit: contain !important;
+          padding: 8px !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* 1. Product Cards (Square aspect ratio for Mobile & PC) */
+        .product-card-image {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          overflow: hidden;
+          border-radius: 8px;
+          background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .product-card-image .image-button {
+          width: 100%;
+          height: 100%;
+          display: block;
+          padding: 0;
+          border: none;
+          background: transparent;
+        }
+
+        /* 2. Hero Section Main Banner Image */
+        .hero-visual {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 4 / 3;
+          max-height: 420px;
+          overflow: hidden;
+          border-radius: 12px;
+        }
+
+        .hero-image-container {
+          width: 100%;
+          height: 100%;
+        }
+
+        /* 3. Product Popup / Detail Modal Image */
+        .product-detail-image {
+          position: relative;
+          width: 100%;
+          height: 380px;
+          overflow: hidden;
+          border-radius: 12px;
+          background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .product-gallery-thumbs {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .product-gallery-thumbs button {
+          width: 60px;
+          height: 60px;
+          aspect-ratio: 1 / 1;
+          overflow: hidden;
+          border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          padding: 0;
+          background: transparent;
+        }
+
+        /* 4. Cart Drawer Items & Compare Items */
+        .cart-thumb, .compare-image-box {
+          width: 64px;
+          height: 64px;
+          aspect-ratio: 1 / 1;
+          overflow: hidden;
+          border-radius: 6px;
+          flex-shrink: 0;
+        }
+
+        .compare-image-box {
+          width: 100%;
+          height: 160px;
+          margin-bottom: 12px;
+        }
+
+        /* 5. Mobile Dynamic Adjustments */
+        @media (max-width: 768px) {
+          .hero-visual {
+            aspect-ratio: 16 / 9;
+            max-height: 260px;
+          }
+
+          .product-detail-image {
+            height: 250px;
+          }
+
+          .product-gallery-thumbs button {
+            width: 48px;
+            height: 48px;
+          }
+        }
+      `}</style>
+
       <StoreHeader
         settings={settings}
         categories={categories}
