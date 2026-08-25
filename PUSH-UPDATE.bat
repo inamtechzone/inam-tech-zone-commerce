@@ -1,6 +1,9 @@
 @echo off
 title INAM TECH ZONE - GitHub Update
 cd /d "%~dp0"
+set "SAFE_DIR=%CD:\=/%"
+git config --global --get-all safe.directory | findstr /x /l /c:"%SAFE_DIR%" >nul
+if errorlevel 1 git config --global --add safe.directory "%SAFE_DIR%"
 echo.
 echo Updating INAM TECH ZONE on GitHub...
 git branch -M main

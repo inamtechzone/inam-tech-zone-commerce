@@ -4,6 +4,8 @@
 
 Run `PUSH-UPDATE.bat`. It fetches the existing GitHub branch, then uses `force-with-lease` to safely replace the old unrelated repository history with this verified final project. The folder points to:
 
+The batch also registers its current extracted folder as a Git `safe.directory`, resolving Windows ownership differences between CodexSandboxOffline and your normal Windows account.
+
 `https://github.com/inamtechzone/inam-tech-zone-commerce.git`
 
 ## 2. Deploy the Google backend

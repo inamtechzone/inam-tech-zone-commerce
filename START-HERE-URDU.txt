@@ -10,6 +10,7 @@ GitHub update:
 5. Push مکمل ہونے کے بعد Vercel website خود build کرے گی۔
 
 PUSH-UPDATE.bat پہلے GitHub branch کو fetch کرتی ہے، پھر force-with-lease کے ذریعے پرانے repository content کو اس مکمل final project سے safely replace کرتی ہے۔
+Batch extracted folder کو Git safe-directory list میں خود شامل کرتی ہے، اس لیے CodexSandboxOffline ownership error بھی automatically fix ہوگا۔
 
 ضروری Google sync setup:
 6. google-apps-script/Code.gs کو Google Apps Script editor میں paste کریں۔
