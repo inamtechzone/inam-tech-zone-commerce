@@ -9,6 +9,8 @@ GitHub update:
 4. GitHub login مانگے تو inamtechzone account سے login کریں۔
 5. Push مکمل ہونے کے بعد Vercel website خود build کرے گی۔
 
+PUSH-UPDATE.bat پہلے GitHub branch کو fetch کرتی ہے، پھر force-with-lease کے ذریعے پرانے repository content کو اس مکمل final project سے safely replace کرتی ہے۔
+
 ضروری Google sync setup:
 6. google-apps-script/Code.gs کو Google Apps Script editor میں paste کریں۔
 7. setupStore('your-email', 'minimum-10-character-password') ایک دفعہ run کریں۔

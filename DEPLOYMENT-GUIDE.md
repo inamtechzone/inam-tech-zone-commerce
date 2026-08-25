@@ -2,7 +2,7 @@
 
 ## 1. Push the complete folder
 
-Run `PUSH-UPDATE.bat`. The folder already contains a `main` branch-ready source structure and points to:
+Run `PUSH-UPDATE.bat`. It fetches the existing GitHub branch, then uses `force-with-lease` to safely replace the old unrelated repository history with this verified final project. The folder points to:
 
 `https://github.com/inamtechzone/inam-tech-zone-commerce.git`
 
