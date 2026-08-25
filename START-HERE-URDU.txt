@@ -1,0 +1,32 @@
+INAM TECH ZONE — FINAL A TO Z WEBSITE
+
+یہ مکمل final folder ہے۔ اسے کسی پرانے project کے اندر merge نہ کریں۔
+
+GitHub update:
+1. ZIP extract کریں۔
+2. پورا extracted folder کھولیں۔
+3. PUSH-UPDATE.bat پر double-click کریں۔
+4. GitHub login مانگے تو inamtechzone account سے login کریں۔
+5. Push مکمل ہونے کے بعد Vercel website خود build کرے گی۔
+
+ضروری Google sync setup:
+6. google-apps-script/Code.gs کو Google Apps Script editor میں paste کریں۔
+7. setupStore('your-email', 'minimum-10-character-password') ایک دفعہ run کریں۔
+8. Deploy > New deployment > Web app کریں۔ Execute as Me اور Access Anyone رکھیں۔
+9. ملنے والا /exec URL Vercel Environment Variable میں شامل کریں:
+   NEXT_PUBLIC_INAM_API_ENDPOINT = Apps Script /exec URL
+10. Production, Preview اور Development select کرکے Vercel Redeploy کریں۔
+
+Website pages:
+/               Home store
+/products       Products
+/solutions      Full Solutions page
+/services       Full Services page
+/support        Full Support page
+/admin          Separate Admin panel
+
+اہم:
+- Mobile اور desktop ایک ہی Google Sheet استعمال کریں گے۔
+- Active device پر نئی product تقریباً 10 seconds میں خود نظر آئے گی۔
+- Product preview image crop یا extra zoom نہیں ہوگی۔
+- ہر save، delete، quote اور error کا واضح message نظر آئے گا۔

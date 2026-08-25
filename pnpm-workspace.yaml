@@ -1,0 +1,9 @@
+packages:
+  - '.'
+
+minimumReleaseAge: 2880
+
+minimumReleaseAgeExclude:
+  - '@openai/sites-vite-plugin'
+  - '@openai/sites-sdk'
+  - '@openai/sites'
