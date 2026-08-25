@@ -201,11 +201,34 @@ function ProductModal({ product, settings, categories, onClose, onAdd, wished, o
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(productImages(product)[0] || '');
   const images = productImages(product);
+  const activeIndex = Math.max(0, images.indexOf(activeImage || images[0]));
+  const showImage = (offset) => {
+    if (images.length < 2) return;
+    setActiveImage(images[(activeIndex + offset + images.length) % images.length]);
+  };
+  useEffect(() => {
+    if (!product) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => event.key === 'Escape' && onClose();
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [product, onClose]);
   if (!product) return null;
   return <div className="overlay" role="dialog" aria-modal="true" aria-label={product.name} onMouseDown={onClose}>
     <div className="product-modal" onMouseDown={(e) => e.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="Close product">×</button>
-      <div className="product-detail-media"><div className="product-detail-image"><img src={activeImage || images[0]} alt={product.name} />{product.badge && <span>{product.badge}</span>}</div>{images.length > 1 && <div className="product-gallery-thumbs" aria-label="Product images">{images.map((image, index) => <button type="button" className={(activeImage || images[0]) === image ? 'active' : ''} key={`${image}-${index}`} onClick={() => setActiveImage(image)} aria-label={`View product image ${index + 1}`}><img src={image} alt="" /></button>)}</div>}</div>
+      <div className="product-detail-media">
+        <div className="product-detail-image">
+          <img src={activeImage || images[0]} alt={`${product.name} — image ${activeIndex + 1} of ${images.length}`} />
+          {product.badge && <span>{product.badge}</span>}
+          {images.length > 1 && <><button type="button" className="gallery-arrow gallery-previous" onClick={() => showImage(-1)} aria-label="Previous product image">‹</button><button type="button" className="gallery-arrow gallery-next" onClick={() => showImage(1)} aria-label="Next product image">›</button><small className="gallery-counter" aria-live="polite">{activeIndex + 1} / {images.length}</small></>}
+        </div>
+        {images.length > 1 && <div className="product-gallery-thumbs" aria-label="Product images">{images.map((image, index) => <button type="button" className={(activeImage || images[0]) === image ? 'active' : ''} key={`${image}-${index}`} onClick={() => setActiveImage(image)} aria-label={`View product image ${index + 1}`} aria-current={(activeImage || images[0]) === image ? 'true' : undefined}><img src={image} alt="" /></button>)}</div>}
+      </div>
       <div className="product-detail-copy">
         <div className="product-breadcrumb"><button onClick={() => onCategory('')}>Products</button><span>/</span><button onClick={() => onCategory(product.category)}>{product.category}</button><span>/</span><b>{product.sku}</b></div>
         <p className="eyebrow">{product.category} · {product.sku}</p><h2>{product.name}</h2><p className="detail-model">{product.brand || 'INAM Select'} · {product.model || product.sku}</p>
