@@ -18,3 +18,6 @@ next-env.d.ts
 # local work and output folders
 /work/
 /outputs/
+
+# private one-time Google setup credentials (kept out of GitHub)
+/PRIVATE-SETUP/
