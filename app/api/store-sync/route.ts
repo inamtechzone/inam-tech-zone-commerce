@@ -16,10 +16,27 @@ function googleEndpoint() {
 }
 
 function configurationError() {
-  return NextResponse.json({
-    ok: false,
-    error: 'Shared synchronization is not configured. Add INAM_API_ENDPOINT in Vercel and redeploy.',
-  }, { status: 503, headers: noStoreHeaders });
+  return NextResponse.json(
+    {
+      ok: false,
+      error: 'Shared synchronization is not configured. Add INAM_API_ENDPOINT in Vercel and redeploy.',
+    },
+    { status: 503, headers: noStoreHeaders }
+  );
+}
+
+async function fetchWithTimeout(url: string | URL, options: RequestInit, timeoutMs = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
 }
 
 async function relay(upstream: Response) {
@@ -28,41 +45,72 @@ async function relay(upstream: Response) {
     const data = JSON.parse(text);
     return NextResponse.json(data, { status: upstream.ok ? 200 : upstream.status, headers: noStoreHeaders });
   } catch {
-    return NextResponse.json({
-      ok: false,
-      error: 'Google Apps Script returned an invalid response. Deploy it as a Web app with access set to Anyone.',
-    }, { status: 502, headers: noStoreHeaders });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'Google Apps Script returned an invalid response. Deploy it as a Web app with access set to Anyone.',
+      },
+      { status: 502, headers: noStoreHeaders }
+    );
   }
 }
 
 export async function GET(request: NextRequest) {
   const endpoint = googleEndpoint();
   if (!endpoint) return configurationError();
+
   try {
     const target = new URL(endpoint);
     request.nextUrl.searchParams.forEach((value, key) => target.searchParams.set(key, value));
     target.searchParams.set('_proxy', Date.now().toString());
-    const upstream = await fetch(target, { cache: 'no-store', redirect: 'follow' });
+
+    const upstream = await fetchWithTimeout(
+      target.toString(),
+      {
+        method: 'GET',
+        cache: 'no-store',
+        redirect: 'follow',
+      },
+      15000
+    );
+
     return relay(upstream);
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Google synchronization request failed.' }, { status: 502, headers: noStoreHeaders });
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    return NextResponse.json(
+      { ok: false, error: isTimeout ? 'Synchronization request timed out.' : error instanceof Error ? error.message : 'Google synchronization request failed.' },
+      { status: 502, headers: noStoreHeaders }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   const endpoint = googleEndpoint();
   if (!endpoint) return configurationError();
+
   try {
     const body = await request.text();
-    const upstream = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body,
-      cache: 'no-store',
-      redirect: 'follow',
-    });
+
+    const upstream = await fetchWithTimeout(
+      endpoint,
+      {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'text/plain;charset=utf-8' 
+        },
+        body: body || '{}',
+        cache: 'no-store',
+        redirect: 'follow',
+      },
+      20000
+    );
+
     return relay(upstream);
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Google synchronization request failed.' }, { status: 502, headers: noStoreHeaders });
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    return NextResponse.json(
+      { ok: false, error: isTimeout ? 'Synchronization request timed out.' : error instanceof Error ? error.message : 'Google synchronization request failed.' },
+      { status: 502, headers: noStoreHeaders }
+    );
   }
 }
