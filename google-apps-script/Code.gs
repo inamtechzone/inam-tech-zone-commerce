@@ -214,7 +214,7 @@ function uploadImage_(body) {
   if (!body.dataUrl || String(body.dataUrl).length > 9000000) throw new Error('Image is missing or too large. Keep uploads below 6 MB.');
   const parts=String(body.dataUrl).split(','); const blob=Utilities.newBlob(Utilities.base64Decode(parts.pop()),body.mimeType || 'image/jpeg',clean_(body.fileName || 'product-image.jpg',120));
   const file=DriveApp.getFolderById(getProperty_('DRIVE_FOLDER_ID')).createFile(blob); file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
-  return { ok:true,fileId:file.getId(),url:'https://drive.google.com/uc?export=view&id=' + file.getId() };
+  return { ok:true,fileId:file.getId(),url:'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1600' };
 }
 
 function deleteRecord_(sheetName,keyName,keyValue) {
