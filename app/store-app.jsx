@@ -330,11 +330,13 @@ function ProductModal({ product, settings, categories, onClose, onAdd, wished, o
   return <div className="overlay" role="dialog" aria-modal="true" aria-label={product.name} onMouseDown={onClose}>
     <div className="product-modal" onMouseDown={(e) => e.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="Close product">×</button>
-      <div className="product-detail-media">
+      <div className={`product-detail-media ${images.length > 1 ? 'has-gallery' : 'single-image'}`}>
         <div className="product-detail-image">
-          <StoreImage src={activeImage || images[0]} alt={`${product.name} — image ${activeIndex + 1} of ${images.length}`} />
-          {product.badge && <span>{product.badge}</span>}
-          {images.length > 1 && <><button type="button" className="gallery-arrow gallery-previous" onClick={() => showImage(-1)} aria-label="Previous product image">‹</button><button type="button" className="gallery-arrow gallery-next" onClick={() => showImage(1)} aria-label="Next product image">›</button><small className="gallery-counter" aria-live="polite">{activeIndex + 1} / {images.length}</small></>}
+          <div className="product-image-stage">
+            <StoreImage src={activeImage || images[0]} alt={`${product.name} — image ${activeIndex + 1} of ${images.length}`} />
+            {product.badge && <span className="product-stage-badge">{product.badge}</span>}
+            {images.length > 1 && <><button type="button" className="gallery-arrow gallery-previous" onClick={() => showImage(-1)} aria-label="Previous product image">‹</button><button type="button" className="gallery-arrow gallery-next" onClick={() => showImage(1)} aria-label="Next product image">›</button><small className="gallery-counter" aria-live="polite">{activeIndex + 1} / {images.length}</small></>}
+          </div>
         </div>
         {images.length > 1 && <div className="product-gallery-thumbs" aria-label="Product images">{images.map((image, index) => <button type="button" className={(activeImage || images[0]) === image ? 'active' : ''} key={`${image}-${index}`} onClick={() => setActiveImage(image)} aria-label={`View product image ${index + 1}`} aria-current={(activeImage || images[0]) === image ? 'true' : undefined}><StoreImage src={image} alt="" loading="lazy" /></button>)}</div>}
       </div>
