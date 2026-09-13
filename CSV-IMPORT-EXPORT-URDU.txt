@@ -1,0 +1,19 @@
+INAM TECH ZONE — PRODUCT CSV IMPORT / EXPORT
+============================================
+
+1. Admin Panel > Products کھولیں۔
+2. Download Template دبائیں اور CSV فائل Excel میں کھولیں۔
+3. ہر product کو الگ row میں شامل کریں۔ name اور sku لازمی ہیں۔
+4. details میں specifications کو | نشان سے الگ لکھیں۔
+5. featured کے لیے TRUE یا FALSE لکھیں۔
+6. status میں active، draft یا archived لکھیں۔
+7. image خالی ہو تو ITZ placeholder لگ جائے گا؛ بعد میں Admin سے اصل image upload کر سکتے ہیں۔
+8. image تا image6 میں اسی Cloudflare store کے /media/products/... یا /products/... paths استعمال کیے جا سکتے ہیں۔
+9. CSV UTF-8 format میں save کریں، پھر Import CSV دبائیں۔
+10. موجودہ مکمل catalog لینے کے لیے Export CSV دبائیں۔ یہی exported file دوبارہ import بھی ہو سکتی ہے۔
+
+Import behavior:
+- موجودہ SKU ملنے پر وہ product update ہوگا۔
+- نیا SKU ہونے پر نیا product create ہوگا۔
+- ایک file میں maximum 250 products اور file size maximum 2 MB ہے۔
+- CSV import Cloudflare D1 میں save ہونے کے بعد PC اور mobile دونوں پر synchronize ہوگا۔

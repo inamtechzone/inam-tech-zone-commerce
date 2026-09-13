@@ -1,0 +1,52 @@
+INAM TECH ZONE — FINAL V8.2 CLOUDFLARE-ONLY RELEASE
+===================================================
+
+اس release میں مکمل backend اور storage Cloudflare پر منتقل ہے۔
+
+Platform:
+- Cloudflare Pages: storefront، responsive web app، admin اور edge API
+- Cloudflare D1: products، inventory، categories، orders، customers، quotes، coupons، settings، sessions
+- Cloudflare R2: product images، hero media، private documents اور files
+
+نئے advanced features:
+- Products کا Excel-compatible CSV import اور export
+- Matching CSV template download، column aliases اور row-level validation
+- Existing SKU import پر update، نئے SKU پر create، maximum 250 rows
+- CSV catalog Cloudflare D1 میں save اور تمام devices پر synchronize ہوتا ہے
+- سادہ blue/navy/white color system؛ heavy gradients اور unnecessary color effects کم
+- تمام navigation اور action buttons کے consistent hover/focus states
+- Product preview visible screen کے اندر fit؛ mobile پر full-screen image/zoom ختم
+- Product images کے لیے desktop، tablet اور mobile پر fixed-size frames
+- Product image کبھی auto-fill، crop یا zoom نہیں ہوگی؛ پوری image contain ہو گی
+- Product detail، gallery، cart، checkout، compare اور admin previews میں same sizing rule
+- Admin sidebar میں secure Cloud Files manager
+- Multiple file drag/drop upload، list، authenticated download اور delete
+- Image URL کو پہلے R2 میں import کرنا؛ external URL product record میں save نہیں ہوتا
+- Hero image کا direct Cloudflare R2 upload
+- Product images 1–6، maximum 6 MB each
+- Private files maximum 10 MB each
+- Duplicate product کی shared R2 image محفوظ رہتی ہے
+- Product update/delete پر orphaned R2 images automatic cleanup
+- R2 product image route public، مگر business files public route سے inaccessible
+
+Synchronization:
+- D1 authoritative source ہے
+- Mobile، PC اور laptop تقریباً 3 seconds میں shared changes refresh کرتے ہیں
+- Browser data clear ہونے کے بعد latest Cloudflare data واپس load ہوتا ہے
+- Deleted order کے customer totals دوبارہ calculate ہوتے ہیں
+
+Security:
+- Admin write/file actions server-side session سے protected ہیں
+- PBKDF2-SHA256 password hashing: 100,000 iterations
+- Same-origin write protection، request-size limits، strict file type allowlist
+- Private/local URL imports blocked
+- CSP صرف self-hosted Cloudflare images allow کرتی ہے
+
+Third-party storage status:
+- Google Drive: removed
+- OneDrive: removed
+- Google Apps Script: removed
+- Google Sheets: removed
+- External database: removed
+
+Start: START-HERE-CLOUDFLARE-URDU.txt

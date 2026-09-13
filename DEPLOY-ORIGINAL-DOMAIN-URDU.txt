@@ -1,0 +1,20 @@
+INAM TECH ZONE — ORIGINAL DOMAIN DEPLOYMENT
+===========================================
+
+1. پہلے UPDATE-CLOUDFLARE-ALL-IN-ONE.bat چلائیں تاکہ نئی website Cloudflare Pages پر deploy ہو جائے۔
+2. Cloudflare Dashboard میں Workers & Pages کھولیں۔
+3. inam-tech-zone-commerce project منتخب کریں۔
+4. Custom domains کھولیں اور Set up a custom domain دبائیں۔
+5. اپنا اصل domain لکھیں، مثلاً example.com، اور Continue کریں۔
+6. www.example.com بھی الگ custom domain کے طور پر add کریں۔
+7. Root/apex domain (example.com) کے لیے domain اسی Cloudflare account میں zone ہونا اور nameservers Cloudflare پر ہونا ضروری ہیں۔
+8. اگر domain اسی Cloudflare zone میں ہے تو مطلوبہ CNAME record Cloudflare خود بنا دے گا۔
+9. اگر صرف subdomain (مثلاً shop.example.com) کسی دوسرے DNS provider پر ہے تو پہلے Pages میں custom domain add کریں، پھر اس DNS provider پر CNAME کو اپنے inam-tech-zone-commerce.pages.dev address کی طرف point کریں۔
+10. SSL/domain status Active ہونے کا انتظار کریں، پھر دونوں addresses کھول کر website check کریں۔
+11. صرف ایک address کو primary رکھیں؛ دوسرے کو Cloudflare Redirect Rule کے ذریعے primary address پر forward کریں۔
+
+اہم:
+- domain name اس folder کی کسی code file میں لکھنے کی ضرورت نہیں۔
+- Cloudflare custom domain attach ہونے کے بعد products، orders، images اور admin data اسی D1/R2 backend سے چلیں گے۔
+- Pages dashboard میں domain attach کیے بغیر صرف manually CNAME نہ بنائیں؛ پہلے Set up a custom domain مکمل کریں۔
+- DNS/SSL active ہونے اور نئی website check ہونے سے پہلے پرانا Vercel/domain record یا deployment delete نہ کریں۔

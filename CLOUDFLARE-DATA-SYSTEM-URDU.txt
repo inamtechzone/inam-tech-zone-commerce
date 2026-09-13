@@ -1,0 +1,32 @@
+INAM TECH ZONE — CLOUDFLARE DATA AND FILE SYSTEM
+=================================================
+
+Cloudflare D1 authoritative structured database ہے۔ اس میں:
+- Products اور inventory
+- Categories اور promotions
+- Orders، checkout totals اور tracking
+- Customers، quotes اور settings
+- Admin sessions اور password settings
+
+Cloudflare R2 authoritative file storage ہے۔ اس میں:
+- Uploaded product images: products/ prefix
+- Uploaded hero images: products/ prefix
+- Private admin documents/files: files/ prefix
+
+Public access:
+- صرف products/ images storefront کے /media/products/ route سے دکھتی ہیں۔
+- files/ documents کا کوئی public URL نہیں۔
+- Private file list، download اور delete صرف authenticated Admin API سے ہوتا ہے۔
+
+Cloudflare Pages میں:
+- Website static assets
+- Built-in starter product photography
+- Transparent ITZ logo اور social preview
+
+Browser storage صرف theme، cart، wishlist اور temporary cache کے لیے ہے۔ Business data کا اصل source D1/R2 ہے۔
+
+Bindings:
+- DB = inam-tech-zone-db
+- MEDIA = inam-tech-zone-media
+
+Google Drive، OneDrive، Apps Script یا Google Sheets کا کوئی connection نہیں۔

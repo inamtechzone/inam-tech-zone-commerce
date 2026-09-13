@@ -1,0 +1,67 @@
+INAM TECH ZONE — CLOUDFLARE-ONLY FINAL V8
+==========================================
+
+اس version میں A to Z مکمل store صرف Cloudflare استعمال کرتا ہے:
+
+- Website، Admin Panel اور secure API: Cloudflare Pages + Worker
+- Products، stock، orders، customers، tracking، settings: Cloudflare D1
+- Product images، hero images اور private files: Cloudflare R2
+
+Google Drive، OneDrive، Apps Script، Google Sheets یا external database استعمال نہیں ہوتی۔
+
+پہلی بار Publish:
+
+1. ZIP extract کریں۔
+2. DEPLOY-CLOUDFLARE-ALL-IN-ONE.bat پر double-click کریں۔
+3. Browser میں Cloudflare login مکمل کریں۔
+4. File Pages project، D1 database اور R2 bucket check/create کرے گی۔
+5. آخر میں Cloudflare Pages URL show ہوگا۔
+
+ضروری Cloudflare R2 activation:
+
+Cloudflare-only image/file storage کے لیے اسی account پر R2 active ہونا ضروری ہے۔ اگر error 10042 یا “R2 is not active” آئے تو:
+
+1. Cloudflare Dashboard کھولیں۔
+2. Storage & databases > R2 > Overview کھولیں۔
+3. R2 activation/checkout مکمل کریں۔
+4. DEPLOY-CLOUDFLARE-ALL-IN-ONE.bat دوبارہ چلائیں۔
+
+App کسی Google یا third-party storage پر fallback نہیں کرے گی۔
+
+Admin Login:
+
+- URL: website-address/admin/
+- Email: admin@inamtechzone.com
+- Temporary Password: ITZ-Temp#8427-Admin
+
+پہلی login کے فوراً بعد Settings > Integrations میں password تبدیل کریں۔
+
+Cloudflare images:
+
+- Products میں image drag/drop یا device سے select کریں۔
+- Minimum 1 اور maximum 6 images فی product۔
+- JPG، PNG، WebP، GIF، AVIF؛ maximum 6 MB فی image۔
+- URL paste کرنے پر image پہلے R2 میں import ہوتی ہے، پھر product میں Cloudflare path save ہوتا ہے۔
+- Product delete پر unused R2 images بھی delete ہوتی ہیں۔
+
+Cloud Files:
+
+- Admin sidebar میں Cloud Files کھولیں۔
+- Documents، sheets، PDFs، ZIP اور images upload کیے جا سکتے ہیں۔
+- Maximum 10 MB فی file۔
+- Files private ہیں؛ download/list/delete کے لیے Admin login ضروری ہے۔
+
+Synchronization:
+
+- PC، mobile اور laptop ایک D1 database استعمال کرتے ہیں۔
+- Changes تقریباً 3 seconds میں دوسرے device پر refresh ہوتی ہیں۔
+- Browser data clear ہونے سے products، orders یا settings factory reset نہیں ہوں گی۔
+- Cart، wishlist اور theme صرف device preference/cache ہیں۔
+
+Update کے لیے:
+
+UPDATE-CLOUDFLARE-ALL-IN-ONE.bat چلائیں۔
+
+GitHub push کے لیے:
+
+PUSH-UPDATE.bat چلائیں۔
